@@ -1,11 +1,11 @@
 package grawler
 
 type IAnalyzer[T any] interface {
-	GetUrls(source string) []string
-	GetModel(source string) *T
+	GetUrls() []string
+	GetModel() *T
 }
 
-type NewAnalyzer[T any] func(html *string) IAnalyzer[T]
+type NewAnalyzer[T any] func(html, source *string) (IAnalyzer[T], error)
 
 type MockAnalyzer struct {
 	GetUrls_  func() []string
@@ -17,10 +17,10 @@ type ExapleModel struct {
 	Content string
 }
 
-func (m *MockAnalyzer) GetUrls(source string) []string {
+func (m *MockAnalyzer) GetUrls() []string {
 	return m.GetUrls_()
 }
 
-func (m *MockAnalyzer) GetModel(source string) *ExapleModel {
+func (m *MockAnalyzer) GetModel() *ExapleModel {
 	return m.GetModel_()
 }

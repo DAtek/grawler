@@ -37,8 +37,8 @@ func TestStartCrawling(t *testing.T) {
 			GetUrls_: func() []string { return []string{"a", "b"} },
 		}
 
-		var createAnalyzer NewAnalyzer[ExapleModel] = func(html *string) IAnalyzer[ExapleModel] {
-			return analyzer
+		var createAnalyzer NewAnalyzer[ExapleModel] = func(html, u *string) (IAnalyzer[ExapleModel], error) {
+			return analyzer, nil
 		}
 
 		crawledUrls := map[string]struct{}{}
@@ -114,8 +114,8 @@ func TestStartCrawling(t *testing.T) {
 			GetUrls_: func() []string { return []string{"a", "b"} },
 		}
 
-		var createAnalyzer NewAnalyzer[ExapleModel] = func(html *string) IAnalyzer[ExapleModel] {
-			return analyzer
+		var createAnalyzer NewAnalyzer[ExapleModel] = func(html, u *string) (IAnalyzer[ExapleModel], error) {
+			return analyzer, nil
 		}
 
 		url := "asd"
@@ -156,8 +156,8 @@ func TestStartCrawling(t *testing.T) {
 		defer timeout.Cancel()
 		analyzer := &MockAnalyzer{}
 
-		var createAnalyzer NewAnalyzer[ExapleModel] = func(html *string) IAnalyzer[ExapleModel] {
-			return analyzer
+		var createAnalyzer NewAnalyzer[ExapleModel] = func(html, u *string) (IAnalyzer[ExapleModel], error) {
+			return analyzer, nil
 		}
 
 		err := errors.New("UNEXPECTED_ERROR")
@@ -195,8 +195,8 @@ func TestStartCrawling(t *testing.T) {
 		defer timeout.Cancel()
 		analyzer := &MockAnalyzer{}
 
-		var createAnalyzer NewAnalyzer[ExapleModel] = func(html *string) IAnalyzer[ExapleModel] {
-			return analyzer
+		var createAnalyzer NewAnalyzer[ExapleModel] = func(html, u *string) (IAnalyzer[ExapleModel], error) {
+			return analyzer, nil
 		}
 
 		err := errors.New("UNEXPECTED_ERROR")
@@ -246,8 +246,8 @@ func TestStartCrawling(t *testing.T) {
 			},
 		}
 
-		var createAnalyzer NewAnalyzer[ExapleModel] = func(html *string) IAnalyzer[ExapleModel] {
-			return analyzer
+		var createAnalyzer NewAnalyzer[ExapleModel] = func(html, u *string) (IAnalyzer[ExapleModel], error) {
+			return analyzer, nil
 		}
 
 		baseUrl := "http://demo.example"
@@ -279,14 +279,51 @@ func TestStartCrawling(t *testing.T) {
 		assert.Equal(t, baseUrl+newUrl, remainingUrl)
 	})
 
+	t.Run("Test AnalyzePage logs error if creating the analyzer fails", func(t *testing.T) {
+		timeout := gotils.NewTimeoutMs(100)
+		go func() { panic(<-timeout.ErrorCh) }()
+		defer timeout.Cancel()
+
+		err := errors.New("UNEXPECTED_ERROR")
+		var createAnalyzer NewAnalyzer[ExapleModel] = func(html, u *string) (IAnalyzer[ExapleModel], error) {
+			return nil, err
+		}
+
+		outBuf := &bytes.Buffer{}
+		crawler_ := NewCrawler(
+			&cache.MockCache{
+				Get_: func(key string) (string, error) {
+					return "", nil
+				},
+			},
+			createAnalyzer,
+			&page_loader.MockPageLoader{
+				LoadPage_: func(url string) (string, error) {
+					return "", nil
+				},
+			},
+			gotils.NewLogger(gotils.LogLevelInfo, outBuf, &bytes.Buffer{}),
+			"http://demo.example",
+			CrawlerConfig{},
+		).(*crawler[ExapleModel])
+
+		remainingUrlCh := make(chan string, 1)
+		downloadedUrlCh := make(chan string, 1)
+		downloadedUrlCh <- "asd"
+		resultCh := make(chan *ExapleModel, 1)
+
+		assert.True(t, crawler_.AnalyzePage(downloadedUrlCh, remainingUrlCh, resultCh, 1))
+		assert.True(t, strings.Contains(outBuf.String(), err.Error()))
+	})
+
 	t.Run("Test AnalyzePage logs error if getting item from cache fails", func(t *testing.T) {
 		timeout := gotils.NewTimeoutMs(100)
 		go func() { panic(<-timeout.ErrorCh) }()
 		defer timeout.Cancel()
 		analyzer := &MockAnalyzer{}
 
-		var createAnalyzer NewAnalyzer[ExapleModel] = func(html *string) IAnalyzer[ExapleModel] {
-			return analyzer
+		var createAnalyzer NewAnalyzer[ExapleModel] = func(html, u *string) (IAnalyzer[ExapleModel], error) {
+			return analyzer, nil
 		}
 
 		err := errors.New("UNEXPECTED_ERROR")

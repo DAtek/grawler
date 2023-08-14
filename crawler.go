@@ -201,14 +201,18 @@ func (c crawler[T]) AnalyzePage(downloadedUrlCh, remainingUrlCh chan string, res
 		}
 
 		c.logger.Debug("analyzePage(%d) | Analyzing page %s", i, newUrl)
-		analyzer := c.createAnalyzer(&page)
+		analyzer, err := c.createAnalyzer(&page, &newUrl)
+		if err != nil {
+			c.logger.Error("analyzePage(%d) | Failed to create the analyzer. URL: %s Error: %s", i, newUrl, err)
+			return true
+		}
 
-		if model := analyzer.GetModel(newUrl); model != nil {
+		if model := analyzer.GetModel(); model != nil {
 			c.logger.Info("analyzePage(%d) | Collected model for %s", i, newUrl)
 			resultCh <- model
 		}
 
-		for _, newUrl := range c.urlRegistry.getNew(analyzer.GetUrls(newUrl)) {
+		for _, newUrl := range c.urlRegistry.getNew(analyzer.GetUrls()) {
 			c.urlRegistry.add(newUrl)
 			if string(newUrl[0]) == "/" {
 				newUrl = joinPath(c.baseUrl, newUrl)
