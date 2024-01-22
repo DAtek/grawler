@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/gh/DAtek/grawler/branch/main/graph/badge.svg?token=3WMKQDRJ95)](https://codecov.io/gh/DAtek/grawler) [![Go Report Card](https://goreportcard.com/badge/github.com/DAtek/grawler)](https://goreportcard.com/report/github.com/DAtek/grawler)
+[![codecov](https://codecov.io/gh/DAtek/grawler/graph/badge.svg?token=3WMKQDRJ95)](https://codecov.io/gh/DAtek/grawler) [![Go Report Card](https://goreportcard.com/badge/github.com/DAtek/grawler)](https://goreportcard.com/report/github.com/DAtek/grawler)
 
 # Grawler
 
