@@ -363,7 +363,7 @@ func TestMockCrawler(t *testing.T) {
 	t.Run("Test Crawl", func(t *testing.T) {
 		crawler := newMockCrawler().(*MockCrawler[ExapleModel])
 
-		crawler.Crawl_ = func(startingUrl string) chan *ExapleModel {
+		crawler.Crawl_ = func(startingUrl string) <-chan *ExapleModel {
 			ch := make(chan *ExapleModel, 1)
 
 			go func() {

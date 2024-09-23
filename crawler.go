@@ -1,6 +1,7 @@
 package grawler
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -11,18 +12,18 @@ import (
 )
 
 type ICrawler[T any] interface {
-	Crawl(startingUrl string) chan *T
+	Crawl(startingUrl string) <-chan *T
 	Stop()
 	WaitStopped()
 }
 
 type MockCrawler[T any] struct {
-	Crawl_       func(startingUrl string) chan *T
+	Crawl_       func(startingUrl string) <-chan *T
 	Stop_        func()
 	WaitStopped_ func()
 }
 
-func (c MockCrawler[T]) Crawl(startingUrl string) chan *T {
+func (c MockCrawler[T]) Crawl(startingUrl string) <-chan *T {
 	return c.Crawl_(startingUrl)
 }
 
@@ -59,6 +60,8 @@ func NewCrawler[T any](
 	config CrawlerConfig,
 ) ICrawler[T] {
 	config.validate()
+	ctx, cancel := context.WithCancel(context.Background())
+	stopCh := ctx.Done()
 
 	return &crawler[T]{
 		cache:          cache,
@@ -67,9 +70,10 @@ func NewCrawler[T any](
 		logger:         logger,
 		urlRegistry:    newStringRegistry(),
 		baseUrl:        baseUrl,
-		stopCh:         make(chan struct{}, 1),
+		stopCh:         stopCh,
 		wg:             &sync.WaitGroup{},
 		config:         &config,
+		cancel:         cancel,
 	}
 }
 
@@ -82,10 +86,11 @@ type crawler[T any] struct {
 	logger         *gotils.Logger
 	wg             *sync.WaitGroup
 	config         *CrawlerConfig
-	stopCh         chan struct{}
+	stopCh         <-chan struct{}
+	cancel         func()
 }
 
-func (c crawler[T]) Crawl(startingUrl string) chan *T {
+func (c crawler[T]) Crawl(startingUrl string) <-chan *T {
 	resultCh := make(chan *T, c.config.ResultChSize)
 	remainingUrlCh := make(chan string, c.config.RemainingUrlChSize)
 	downloadedUrlCh := make(chan string, c.config.DownloadedUrlChSize)
@@ -147,9 +152,7 @@ func (c crawler[T]) Crawl(startingUrl string) chan *T {
 }
 
 func (c crawler[T]) Stop() {
-	for i := 0; i < c.totalWorkers(); i++ {
-		c.stopCh <- struct{}{}
-	}
+	c.cancel()
 }
 
 func (c crawler[T]) WaitStopped() {
